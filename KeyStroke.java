@@ -1,40 +1,43 @@
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
+import java.io.*;
+import java.security.*;
+import java.security.cert.*;
+import javax.crypto.*;
 
-public class KeyStroke {
-    public static void main(String[] args) throws IOException {
-        try {
-            KeyGenerator keyGenerator=KeyGenerator.getInstance("DES");
-            keyGenerator.init(64);
-            SecretKey key=keyGenerator.generateKey();
-            KeyStore keyStore = KeyStore.getInstance("JCEKS");
-            FileInputStream fis=null;
-            char[] password="keystorepassword".toCharArray();
-            try{
-                fis= new FileInputStream("/home/zemoso/desKeyStore");
-                keyStore.load(fis,password);
-            }catch (CertificateException e) {
-                e.printStackTrace();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            finally {
-                if(fis!=null)
-                    fis.close();
-            }
-        } catch (NoSuchAlgorithmException e1) {
-                e1.printStackTrace();
-        } catch (KeyStoreException e1) {
-                e1.printStackTrace();
+public class KeyStoreManager {
+    private static final String KEYSTORE_TYPE = "JCEKS";
+    private static final String KEYSTORE_FILE = "/home/zemoso/keystore.ks";
+    private static final String KEYSTORE_PASSWORD = "keystorepassword";
+
+
+    private SecretKey createSecretKey() throws Exception {
+        KeyGenerator keyGenerator = null;
+        keyGenerator = KeyGenerator.getInstance("DES");
+        //keyGenerator.init(128);
+        return keyGenerator.generateKey();
+    }
+
+    private KeyStore getKeyStore(String keyStoreName, char[] password) throws Exception {
+        KeyStore keyStore = KeyStore.getInstance(KEYSTORE_TYPE);
+        InputStream stream = null;
+        keyStore.load(stream, password);
+        return keyStore;
+    }
+
+    public static void main(String[] args) throws Exception {
+        File keyStoreFile = new File(KEYSTORE_FILE);
+        if (keyStoreFile.exists() && keyStoreFile.isFile()) {
+            keyStoreFile.delete();
         }
+
+        KeyStoreManager ksm = new KeyStoreManager();
+
+        KeyStore keyStore = ksm.getKeyStore(KEYSTORE_FILE, KEYSTORE_PASSWORD.toCharArray());
+        SecretKey secretKey = ksm.createSecretKey();
+        KeyStore.SecretKeyEntry secretKeyEntry = new KeyStore.SecretKeyEntry(secretKey);
+        KeyStore.ProtectionParameter passwordProtection = new KeyStore.PasswordProtection("entrypassword".toCharArray());
+        keyStore.setEntry("SecretKeyAlias", secretKeyEntry, passwordProtection);
+        keyStore.store(new FileOutputStream(KEYSTORE_FILE), KEYSTORE_PASSWORD.toCharArray());
+
+        System.out.println("Added key into store");
     }
 }
